@@ -1,0 +1,1 @@
+test file: .hidden.c

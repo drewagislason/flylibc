@@ -1,0 +1,23 @@
+unsigned area(unsigned h, unsigned w) // C
+unsigned CppArea(unsigned h, unsigned w) {  // C++
+public Pet(string petName, string petAnimal, string petBreed, int petAge) // C#
+public void printme() // C#
+func GoArea(h int, h int) int { // Go
+public Tree(String myClassification, String myType) { // Java
+public void printme() { // Java
+public static void main(String[] args) {  // Java
+function jsArea(h, w) { // Javascript
+def PyArea(h=5, w=4): // Python
+fn rust_area(h: i32, w: i32) -> i32 { // Rust
+fn main() { // Rust
+func SwiftArea(h: Int, w:Int) -> Int {  // Swift
+func main() { // Swift
+Car(string _brand, string _model, int _year) {  // C++ 
+int  Year(void) { // C++
+void Car::Print(void) // C++
+def __init__(self, name, age):  // Python
+def printme(self):  // Python
+def printage(self) : // Python
+fn new<S: Into<String>>(name: S) -> Person {  // Rust
+fn print_me(&self) {  // Rust
+fn print_age(&self) { // Rust

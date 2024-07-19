@@ -1,0 +1,20 @@
+# sample toml file
+
+root_key = "value"
+
+[alltypes]
+string = "my string"
+string.literal = '/Users/drewg/folder/'
+int = 42
+long.int = 123_456
+bool = true
+
+# arrays aka ordered list, either of same types or multiple types
+[arrays]
+integers = [+99, 42, 0, -17, 123_456, 0xDEADBEEF, 0xdeadbeef, 0xdead_beef, 0o01234567, 0o755, 0b1101_0110]
+strings = ["every", "good", "boy", "does", "fine"]
+bool = [true,false]
+
+# objects aka unordered lists
+[table_array]
+some_keys = { my_string="string", my_bool=false, my_int=99 }

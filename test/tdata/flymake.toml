@@ -1,0 +1,14 @@
+[package]
+name = "myproj"
+version = "0.1.0"
+authors = ["me@mysite.com"]
+std = "*"
+
+[dependencies]
+dep1 = { path="../dep1/" }
+dep2 = { path="../dep2/lib/dep2.a", inc="../dep2/inc/" }
+flylib = { git="https://github.com/drewagislason/flylib", version="*" }
+
+[compiler]
+.c = { cc="cc {in} -c {incs} {dbg} -Wall -Werror -o {out}", ll="cc {in} {dbg} -o {out}", cc_dbg="-g -DDEBUG=1", ll_dbg="-g", cc_inc="-I" }
+.cc.cpp.c++ = { cc="c++ {in} -c {incs} {dbg} -Wall -Werror -o {out}", ll="c++ {in} {dbg} -o {out}" }

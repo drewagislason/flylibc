@@ -1,0 +1,117 @@
+/*-----------------------------------------------------------------------------
+  C header This is a file with headers of many languages
+  Languages represented: C, C++, C#
+-----------------------------------------------------------------------------*/
+
+/* not a header */
+
+## not a header
+
+""" not a header """
+
+    /*------------------------------------------------------------------------
+      Indented C header
+      Are other lines indented?
+    --------------------------------------------------------------------------*/
+
+/*!
+No indent
+*/
+
+/*
+ *
+ *  Comment with stars
+ *
+ *      Code block here  
+ *
+ *  ```
+ *  Another code block
+ *  ```
+ *
+ *  Does it look good?
+*/
+
+##
+#A non Doc header
+#@param   
+# 
+double CalcPi(long decimals)
+{
+  // ...
+}
+
+##!
+#   Calculate surface area of a cone
+#   @ingroup maths
+#   @param  r   radius
+#   @param  l   lateral
+#   @return area of cone
+double ConeArea(double r, double l)
+{
+  // ...
+}
+
+/*!
+  @class Car A class for listing automobiles
+
+  Eventually target market will be car and dealerships and repair shops.
+*/
+class Car {
+  public:
+    string brand;
+    string model;
+    int year;
+
+    /*!
+      Constructor for Car
+
+      @param    _brand    brand of car (e.g. Honda)  
+      @param    _model    model of car (e.g. Ridgeline)  
+      @param    _year     year of car (e.g. 2022)  
+    */
+    Car(string _brand, string _model, int _year) {
+      brand = _brand;
+      model = _model;
+      year = _year;
+    }
+
+///
+///
+/// @class Person A person for a contact database
+///
+///   Eventually will contain other person attributes
+impl Person {
+
+    ///   Create a Person object
+    ///   @param  name        string or reference to string
+    ///   @return Person
+    fn new<S: Into<String>>(name: S) -> Person {
+        Person { name: name.into(), age: 21 }
+    }
+
+class Person:
+    """!
+    @class Person A class that defines attributes of a person. Useful in many applications.
+
+    Default attributes:
+        name    full name of person  
+        age     age of person
+    """
+
+    def __init__(self, name, age):
+        """!
+        Initialize a person. Requires name and age.
+        @param  name    person's full name
+        @param  age     person's age in years (0-n)
+        """
+        self.name = name
+        self.age = age
+
+empty header
+///
+///
+///
+
+also empty header
+/*!
+*/

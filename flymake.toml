@@ -1,0 +1,8 @@
+[package]
+name = "flylibc"
+version = "1.0"
+
+[folders]
+examples = "--rt"
+test = "--rt"
+tools = "--rt"

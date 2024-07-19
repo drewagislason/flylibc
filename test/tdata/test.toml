@@ -1,0 +1,30 @@
+# A sample TOML file
+
+key1 = "value"
+key2 = true
+
+[alltypes]
+
+# comment here
+integer = 5
+  false       =         false
+true=true
+
+string = "string"
+escaped.key = "esc: \t\r\u2102\n"
+'literal.key' = 'literal string: \t string'
+array = [true, "string", -99_123]
+inline."table" = { string = "str", int = 99, bool = true }
+multi-line.string = """
+  Every \
+  Good \
+  Boy \
+  Does \
+  Fine \
+"""
+
+[table2]
+
+[table3]
+  key1 = "table3 value"
+  key2 = 0xfe
