@@ -50,7 +50,7 @@ typedef struct
   const flyCliOpt_t  *pOpts;
   const char         *szVersion;  // e.g. "my_prog v1.0.3"
   const char         *szHelp;     // e.g. "usage = my_prog [-s] [-v] file\n\n-s  sort\n-v  verbose\n";
-  bool_t              fNoPrint;   // don't print errors, higher layer will do it
+  bool_t              fNoPrint;   // don't print errors, higher layer will do it, use TRUE or FALSE
 } flyCli_t;
 
 #define FLYCLI_HELP     -32766

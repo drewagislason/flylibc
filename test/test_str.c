@@ -302,6 +302,92 @@ void TcStrPath(void)
 }
 
 /*-------------------------------------------------------------------------------------------------
+  Test TcStrPathRelative() and FlyStrPathIsRelative()
+-------------------------------------------------------------------------------------------------*/
+void TcStrPathRelative(void)
+{
+  typedef struct
+  {
+    const char *szPath;
+    bool_t      fIsRelative;
+  } tcIsRelative_t;
+
+  typedef struct
+  {
+    const char  *szBase;
+    const char  *szPath;
+    const char  *szExpPath;
+  } tcRelative_t;
+
+  static const tcIsRelative_t aIsRelTests[] =
+  {
+    { "../file",           TRUE  },
+    { "folder/",           TRUE  },
+    { "/Users/me/folder/", FALSE },
+    { "~/file",            FALSE },
+  };
+
+  static const tcRelative_t aTests[] = 
+  {
+    { "/Users/me/",                "/Users/me/",               "" },
+    { "/",                         "/Users/me/file.c",         "Users/me/file.c" },
+    { "/Users/me/",                "/Users/me/Documents/",     "Documents/" },
+    { "/Users/me/",                "/Users/",                  "../" },
+    { "/Users/me/",                "/Users/me/foo/bar/",       "foo/bar/" },
+    { "/Users/me/foo.txt",         "/Users/me/file.c",         "file.c" },
+    { "/Users/me/folder/",         "/Users/me/Documents/",     "../Documents/" },
+    { "/Users/me/folder/",         "/Users/me/bin/sub/file.c", "../bin/sub/file.c" },
+    { "/Users/me/foo/bar/",        "/Users/me/bin/sub/file.c", "../../bin/sub/file.c" },
+    { "/Users/me/foo/bar/baz.txt", "/Users/me/bin/sub/file.c", "../../bin/sub/file.c" },
+    { "C:\\Work\\dir name\\",      "C:\\Docs\\sub dir\\a b.c", "..\\..\\Docs\\sub dir\\a b.c" },
+    { "C:\\",                      "C:\\Docs\\sub dir\\a b.c", "Docs\\sub dir\\a b.c" },
+  };
+
+  unsigned  i;
+  unsigned  len;
+  bool_t    fIs;
+  bool_t    fFailed;
+  char      szDst[256];
+
+  FlyTestBegin();
+
+  // test FlyStrPathIsRelative()
+  for(i = 0; i < NumElements(aIsRelTests); ++i)
+  {
+    fIs = FlyStrPathIsRelative(aIsRelTests[i].szPath);
+    if(fIs != aIsRelTests[i].fIsRelative)
+    {
+      FlyTestPrintf("%u: %s, exp fIs %u, got %u\n", i, aIsRelTests[i].szPath, aIsRelTests[i].fIsRelative, fIs);
+      FlyTestFailed();
+    }
+  }
+
+  // test FlyStrPathRelative()
+  for(i = 0; i < NumElements(aTests); ++i)
+  {
+    if(FlyTestVerbose())
+      FlyTestPrintf("%u: szBase %s, szPath %s, szExpPath %s\n", i, aTests[i].szBase, aTests[i].szPath, aTests[i].szExpPath);
+    strcpy(szDst, "bad");
+    fFailed = FALSE;
+    len = FlyStrPathRelative(NULL, sizeof(szDst), aTests[i].szBase, aTests[i].szPath);
+    if(len != strlen(aTests[i].szExpPath))
+      fFailed = TRUE;
+
+    len = FlyStrPathRelative(szDst, sizeof(szDst), aTests[i].szBase, aTests[i].szPath);
+    if(len != strlen(aTests[i].szExpPath) || strcmp(szDst, aTests[i].szExpPath) != 0)
+      fFailed = TRUE;
+    if(fFailed)
+    {
+      FlyTestPrintf("%u: exp '%s', len %u, got '%s', len %u\n", i,
+          aTests[i].szExpPath, strlen(aTests[i].szExpPath), szDst, len);
+      FlyTestFailed();
+    }
+  }
+
+  FlyTestEnd();
+}
+
+/*-------------------------------------------------------------------------------------------------
   Test FlyStrPathParent()
 -------------------------------------------------------------------------------------------------*/
 void TcStrPathParent(void)
@@ -309,46 +395,65 @@ void TcStrPathParent(void)
   typedef struct
   {
     const char *szPath;
-    bool_t      fFound;
-    const char *szResult;
+    unsigned    len;
+    const char *szExp;
   } tcStrPathParent_t;
 
   static const tcStrPathParent_t aTests[] =
   { 
-  { "/Users/me/work/",  TRUE,   "/Users/me/" },
-  { "/Users/me/file.c", TRUE,   "/Users/me/" },
-  { "../folder/",       TRUE,   "../" },
-  { ".",                TRUE,   "../" },
-  { "../../",           TRUE,   "../../../" },
-  { "~/Folder/..",      TRUE,   "~/Folder/" },
-  { "~/Work/",          TRUE,   "~/" },
-  { "file.c",           FALSE,  "file.c" },
-  { "folder/",          FALSE,  "folder/" },
-  { "~",                FALSE,  "~" },
-  { "/",                FALSE,  "/" },
-  { "",                 FALSE,  "" },
+    { "/Users/me/work/",  10, "/Users/me/" },
+    { "/Users/me/file.c", 10, "/Users/me/" },
+    { "./folder/sub/",    9,  "./folder/" },
+    { "../folder/",       3,  "../" },
+    { "file.c",           2,  "./" },
+    { "folder/",          2,  "./" },
+    { "folder/.",         2,  "./" },
+    { "",                 3,  "../" },
+    { ".",                3,  "../" },
+    { "./",               3,  "../" },
+    { "..",               6,  "../../" },
+    { "../",              6,  "../../" },
+    { "../..",            9,  "../../../" },
+    { "../../",           9,  "../../../" },
+    { "~/Work/",          2,  "~/" },
+    { "~/",               7,  "/Users/" },
+    { "~/Folder/..",      9,  "~/Folder/" },
+    { "/file.c",          1,  "/" },
+    { "/",                0,  "/" },
   };
 
   char      szPath[32];
   unsigned  i;
-  bool_t    fFound;
+  unsigned  len;
+  bool_t    fFailed = TRUE;
 
   FlyTestBegin();
 
+  if(FlyTestVerbose())
+    FlyTestPrintf("\n");
   for(i = 0; i < NumElements(aTests); ++i)
   {
+    // verboseness
+    if(FlyTestVerbose())
+      FlyTestPrintf("%u: szPath %s, len %u, exp %s", i, aTests[i].szPath, aTests[i].len, aTests[i].szExp);
+
+    // test
     strcpy(szPath, aTests[i].szPath);
-    fFound = FlyStrPathParent(szPath);
-    if(fFound != aTests[i].fFound)
+    fFailed = FALSE;
+    len = FlyStrPathParent(szPath, sizeof(szPath));
+    if(len != aTests[i].len || (strcmp(szPath, aTests[i].szExp) != 0))
+      fFailed = TRUE;
+    if(fFailed)
     {
-      FlyTestPrintf("%u: got fFound %u, expected %u\n", i, fFound, aTests[i].fFound);
+      if(FlyTestVerbose())
+        FlyTestPrintf(" ... failed\n");
+      FlyTestPrintf("%u: got len %u, exp len %u\n", i, len, aTests[i].len);
+      FlyTestPrintf("got: %s\n", szPath);
+      FlyTestPrintf("exp: %s\n", aTests[i].szExp);
       FlyTestFailed();
     }
-    if(strcmp(szPath, aTests[i].szResult) != 0)
-    {
-      FlyTestPrintf("%u: got %s, expected %s\n", i, szPath, aTests[i].szResult);
-      FlyTestFailed();
-    }
+    if(FlyTestVerbose())
+      FlyTestPrintf(" ... ok\n");
   }
 
   FlyTestEnd();
@@ -1782,6 +1887,7 @@ int main(int argc, const char *argv[])
     { "TcStrPathHasExt",      TcStrPathHasExt },
     { "TcStrPathLang",        TcStrPathLang },
     { "TcStrPathParent",      TcStrPathParent },
+    { "TcStrPathRelative",    TcStrPathRelative },
     { "TcStrPathSlash",       TcStrPathSlash },
     { "TcStrProtoLen",        TcStrProtoLen },
     { "TcStrReplace",         TcStrReplace },

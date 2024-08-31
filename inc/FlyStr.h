@@ -137,13 +137,14 @@ const char       *FlyStrPathHome      (void);
 bool_t            FlyStrPathHomeExpand(char *szPath, size_t size);
 bool_t            FlyStrPathIsFolder  (const char *szPath);
 bool_t            FlyStrPathIsRelative(const char *szPath);
+unsigned          FlyStrPathRelative  (char *szDst, size_t size, const char *szBase, const char *szPath);
 const char       *FlyStrPathLang      (const char *szPath);
 char             *FlyStrPathNameLast  (const char *szPath, unsigned *pLen);
 char             *FlyStrPathNameOnly  (const char *szPath);
 char             *FlyStrPathNameBase  (const char *szPath, unsigned *pLen);
 void              FlyStrPathOnly      (char *szPath);
 char             *FlyStrPathOnlyLen   (const char *szPath, int *pLen);
-bool_t            FlyStrPathParent    (char *szPath);
+unsigned          FlyStrPathParent    (char *szPath, unsigned size);
 
 #define FLYMEM_NO_DIFF  SIZE_MAX
 

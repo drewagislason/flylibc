@@ -39,7 +39,7 @@
 *///-----------------------------------------------------------------------------------------------
 int FlyErrorPrint(const char *szExpr, const char *szFile, const char *szFunc, unsigned line)
 {
-  printf("Assert: (%s), file: %s, func: %s(), line: %u\n", szExpr, szFile, szFunc, line);
+  printf("%s:%u:1: assert: %s, func %s()\n", szFile, line, szExpr, szFunc);
   return 1;
 }
 

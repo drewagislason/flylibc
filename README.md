@@ -2,9 +2,9 @@
 
 flylibc is a C library that augments the standard C library.
 
-Release 1.0
-Copyright (c) 2024 Drew Gislason
-license: <https://mit-license.org>
+Release 1.0  
+Copyright (c) 2024 Drew Gislason  
+license: <https://mit-license.org>  
 
 ## Overview
 

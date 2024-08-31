@@ -39,8 +39,12 @@
 
   Caller must free the memory. If file couldn't be read, returns NULL.
 
-  @seealso FlyFileReadBin().
+  This ccan fail for 2 reasons:
 
+  1. szFileName does not exist or is not a file
+  2. Not enough memory
+
+  See also:  [FlyFileReadBin()](#FlyFileReadBin)
   @param    szFilename    Filename to read. Can include full or partial path.
   @return   pointer file in memory, or NULL if failed. Caller must free file memory
 *///-----------------------------------------------------------------------------------------------
@@ -548,10 +552,12 @@ int FlyFileMakeDir(const char *szPath)
 }
 
 /*!------------------------------------------------------------------------------------------------
-  Returns the full path from a partial name. It's OK if the file doesn't exists as long as the
-  folder does.
+  Returns the full path from a partial name.
 
-  Warning: expects return parameter szPath to be PATH_MAX in size.
+  It's OK if the file doesn't exists as long as the folder does.
+
+  WARNING: this function assumes szPath is either large enough to receive full path. Either use
+  PATH_MAX or call with NULL szPath to get length.
 
   Examples assume cwd is "/Users/me/cwd":
 
@@ -564,24 +570,32 @@ int FlyFileMakeDir(const char *szPath)
       somefolder/       | /User/me/cwd/somefolder/
       /bad/path/        | 
 
-  @param    szPath          ptr to PATH_MAX buffer to receive full path
+  @param    szPath          ptr to PATH_MAX buffer to receive full path or NULL to get length
   @param    szPartialPath   pointer to a partial path like "file.c" or "../file.h" or "~/file.c"
-  @return   TRUE if worked, FALSE if bad path
+  @return   0 if failed, length of full path (1-n) if worked.
 *///-----------------------------------------------------------------------------------------------
-bool_t FlyFileFullPath(char *szPath, const char *szPartialPath)
+unsigned FlyFileFullPath(char *szPath, const char *szPartialPath)
 {
   sFlyFileInfo_t  info;
-  bool_t          fWorked = TRUE;
+  bool_t          fWorked;
+  unsigned        len     = 0;
 
   // check if file/folder exists (e.g. ../file.c or /Users/me/file.txt"
   FlyFileInfoInit(&info);
   fWorked = FlyFileInfoGetEx(&info, szPartialPath);
   if(fWorked)
-    strcpy(szPath, info.szFullPath);
+  {
+    len = strlen(info.szFullPath);
+    if(szPath)
+      FlyStrZCpy(szPath, info.szFullPath, PATH_MAX);
+  }
   else
+  {
     *szPath = '\0';
+    len = 0;
+  }
 
-  return fWorked;
+  return len;
 }
 
 /*!------------------------------------------------------------------------------------------------
@@ -726,7 +740,7 @@ bool_t FlyFileInfoGetEx(sFlyFileInfo_t *pInfo, const char *szPath)
   if(!fExists && szNameLast)
   {
     fIsDir = FlyStrPathIsFolder(szPathEx);
-    if(FlyStrPathParent(szPathEx))
+    if(FlyStrPathParent(szPathEx, sizeof(szPathEx)))
     {
       fExists = FlyFileInfoGet(pInfo, szPathEx);
       if(fExists && pInfo->fIsDir)

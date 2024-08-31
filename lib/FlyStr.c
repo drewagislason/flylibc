@@ -1414,8 +1414,7 @@ bool_t FlyStrPathIsFolder(const char *szPath)
 /*!------------------------------------------------------------------------------------------------
   Returns TRUE if path is relative.
 
-  "../file" and "folder/" are both relative.  
-  "/Users/me/folder/" and "~/file" are not.
+  "../file" and "folder/" are both relative. "/Users/me/folder/" and "~/file" are not.
 
   @param    szPath    pointer to a file or folder path (relative or absolute).
   @return   Returns TRUE if this path is relative, FALSE if absolute.
@@ -1428,6 +1427,135 @@ bool_t FlyStrPathIsRelative(const char *szPath)
     fIsRelative = FALSE;
 
   return fIsRelative;
+}
+
+/*!------------------------------------------------------------------------------------------------
+  Create a relative path from full path szBase to full path szPath.
+
+  Assumes both szBase and szPath are full paths. If not the behavior is undefined.
+
+  See FlyFileFullPath() to get a full path from a relative one (only works with existing paths).
+
+  This is string manipulation only. It doesn't know if the paths exist or not.
+
+  Examples:
+
+  szBase                    | szPath                      | Becomes szDst
+  ------                    |  ------                     | -------------
+  /Users/me/                | /Users/me/                  | "" (empty string)
+  /                         | /Users/me/file.c            | Users/me/file.c
+  /Users/me/                | /Users/me/Documents/        | Documents/
+  /Users/me/                | /Users/                     | ../
+  /Users/me/                | /Users/me/foo/bar/          | foo/bar/
+  /Users/me/foo.txt         | /Users/me/file.c            | file.c
+  /Users/me/folder/         | /Users/me/Documents/        | ../Documents/
+  /Users/me/folder/         | /Users/me/bin/sub/file.c    | ../bin/sub/file.c
+  /Users/me/foo/bar/        | /Users/me/bin/sub/file.c    | ../../bin/sub/file.c
+  /Users/me/foo/bar/baz.txt | /Users/me/bin/sub/file.c    | ../../bin/sub/file.c
+  C:\Work\dir name\         | C:\Docs\sub dir\a b.c       | ..\..\Docs\sub dir\a b.c
+  C:\                       | C:\Docs\sub dir\a b.c       | Docs\sub dir\a b.c
+
+  You can determine the length of the returned relative path by passing NULL for szDst:
+
+  ```c
+  unsigned  len;
+  char     *szDst;
+  len = FlyStrPathRelative(NULL, PATH_MAX, szBase, szPath);
+  szDst = malloc(len + 1);
+  if(szDst)
+  {
+    FlyStrPathRelative(szDst, len + 1, szBase, szPath);
+    printf("relative path %s\n", szDst);
+  ```
+
+  @param    szDst     destination relative path or NULL to just get length
+  @param    size      sizeof szDst buffer
+  @param    szBase    base full path 
+  @param    szPath    full path that will become a relative path to szBase
+  @return   length of relative path (even if larger than size)
+*///-----------------------------------------------------------------------------------------------
+unsigned FlyStrPathRelative(char *szDst, size_t size, const char *szBase, const char *szPath)
+{
+  static const char  szUpL[] = "../";
+  static const char  szUpW[] = "..\\";
+//  const char   *szBaseOrg   = szBase;
+  const char   *szUp        = NULL;
+  const char   *szLastSlash = NULL;
+  const char   *psz;
+  const char   *psz2;
+  unsigned      len         = 0;
+  unsigned      n;
+
+// printf("here1, szBase %s, szPath %s\n", szBase, szPath);
+
+  if(szDst)
+    *szDst = '\0';
+
+// printf("here2\n");
+
+  // ignore common parts up to last slash
+  szLastSlash = NULL;
+  psz = szBase;
+  psz2 = szPath;
+  while(*psz && *psz2 && (*psz == *psz2))
+  {
+    if(isslash(*psz))
+    {
+      szLastSlash = psz;
+
+      // use Linux or Windows style slashes? (based on 1st slash in szBase)
+      if(szUp == NULL)
+        szUp = (*psz == '/') ? szUpL : szUpW;
+    }
+    ++psz;
+    ++psz2;
+  }
+
+// printf("here3\n");
+
+  // no path in base or base has only root path, just return szPath
+  if(szLastSlash == NULL)
+  {
+// printf("here4\n");
+    FlyStrZCpy(szDst, szPath, size);
+    len += strlen(szPath);
+  }
+  else
+  {
+// printf("here5 szLastSlash %s, szBase %s\n", szLastSlash, szBase );
+
+    // skip the common part
+    n = (unsigned)((szLastSlash - szBase) + 1);
+    szPath += n;
+    szBase += n;
+
+// printf("here6 szBase `%s`, szPath `%s`\n", szBase, szPath);
+
+    // add "../" until at common path between szBase and szPath
+    psz = szBase;
+    if(*psz)
+      ++psz;
+    n = strlen(szUp);
+    while(*psz)
+    {
+      if(isslash(*psz))
+      {
+        len += n;
+        FlyStrZCat(szDst, szUp, size);
+      }
+      ++psz;
+    }
+
+// printf("here6\n");
+
+    // add in unique part of szPath
+    FlyStrZCat(szDst, szPath, size);
+    len += strlen(szPath);
+  }
+
+// printf("here7, len %u\n", len);
+
+  return len;
 }
 
 /*!------------------------------------------------------------------------------------------------
@@ -1476,7 +1604,7 @@ char * FlyStrNextSlash(const char *szPath)
 *///-----------------------------------------------------------------------------------------------
 char * FlyStrPrevSlash(const char *szPath, const char *psz)
 {
-  // search from end
+  // search from end if psz is NULL
   if(psz == NULL)
     psz = szPath + strlen(szPath);
 
@@ -1814,85 +1942,126 @@ char * FlyStrPathOnlyLen(const char *szPath, int *pLen)
 }
 
 /*!------------------------------------------------------------------------------------------------
-  Modify szPath to the parent folder of the current szPath.
+  Modify szPath to the parent folder of szPath. Result is always a folder (ends in a slash).
 
-  This is a string manipulation only and does not check if any of the folders in the path exist on
-  disk. It does NOT convert ~ to the $HOME folder.
+  * String manipulation only and does not check if any of the folders in the path exist
+  * The result is always a folder
+  * If size of szPath is too small, string will be truncated. Check that returned length < size
+  * Parent of file (any string not ending in slash) is the enclosing folder)
+  * Length 0 is returned only if already at root
 
-  If it worked, the resulting parent folder always ends in a slash..
+  Exanples:
 
-  Warning: this may add up to 4 characters.
-
-  szPath is unchanged if there is no parent. Some examples:
-
-  Path             | Returns | Parent
+  szPath           | Returns | szPath (parent)
   ---------------- | ------- | -------
-  /Users/me/work/  | TRUE    | /Users/me/
-  /Users/me/file.c | TRUE    | /Users/me/
-  ../folder/       | TRUE    | ../
-  .                | TRUE    | ../
-  ../..            | TRUE    | ../../../
-  ~/Work/          | TRUE    | ~/
-  ~/Folder/..      | TRUE    | ~/Folder/
-  file.c           | FALSE   | file.c
-  folder/          | FALSE   | folder/
-  ~/               | FALSE   | ~/ and FALSE
-  /                | FALSE   | /
-  "" (empty)       | FALSE   | ""
+  "" (empty)       | 3       | ../
+  .                | 3       | ../
+  ..               | 6       | ../../
+  ../../           | 9       | ../../../
+  file.c           | 2       | ./
+  folder/          | 2       | ./
+  folder/.         | 2       | ./
+  ./folder/sub/    | 9       | ./folder/
+  ../folder/       | 3       | ../
+  ~/Work/          | 2       | ~/
+  ~/               | 7       | /Users/
+  ~/Folder/..      | 9       | ~/Folder/
+  /Users/me/work/  | 10      | /Users/me/
+  /Users/me/file.c | 10      | /Users/me/
+  /file.c          | 1       | /
+  /                | 0       | /
 
-  @param    szPath    path to file or folder/
-  @return   TRUE if a parent folder, FALSE if no more parents
+  @param    szPath    on input path to file or folder/, on output, parent
+  @param    size      sizeof szPath
+  @return   length of parent
 *///-----------------------------------------------------------------------------------------------
-bool_t FlyStrPathParent(char *szPath)
+unsigned FlyStrPathParent(char *szPath, unsigned size)
 {
-  static const char szDotDot[] = "../";
-  char   *psz;
-  bool_t  fFoundParent = FALSE;
+  const char szDotDot[] = "../";
+  char       *psz;
+  unsigned    len       = 0;
+  bool_t      fAllDots  = FALSE;
 
-  if(*szPath)
+  psz = szPath;
+  if(*psz == '.')
   {
-    // special case: if only dots and slashes, then add ../
-    // for example, the parent of "../" is "../../"
-    psz = szPath;
-    while(*psz && (*psz == '.' || FlyStrIsSlash(*psz)))
+    while(*psz && (*psz == '.' || isslash(*psz)))
       ++psz;
     if(*psz == '\0')
+    fAllDots = TRUE; 
+  }
+
+  // e.g. "/", no parent , return 0
+  if(isslash(*szPath) && szPath[1] == '\0')
+  {
+    len = 0;
+  }
+
+  // e.g. parent of "~/" is "/Users"
+  else if(*szPath == '~' && isslash(szPath[1]) && szPath[2] == '\0')
+  {
+    FlyStrZCpy(szPath, FlyStrPathHome(), size);
+    psz = FlyStrLastSlash(szPath);
+    if(psz && psz[1] == '\0')
+      psz = FlyStrPrevSlash(szPath, psz - 1);
+    if(psz)
     {
-      // special case, "/" does not have a parent
-      if(FlyStrIsSlash(*szPath) && szPath[1] == '\0')
-        fFoundParent = FALSE;
+      ++psz;
+      *psz = '\0';
+      len = strlen(szPath);
+    }
+  }
 
-      // special case: replace "." or "./" with "../"
-      else if(*szPath == '.' && ((szPath[1] == '\0') || (FlyStrIsSlash(szPath[1]) && (szPath[2] == '\0'))))
+  // find parent
+  else
+  {
+    psz = FlyStrLastSlash(szPath);
+
+    // ends in slash, e.g. "folder/" or "./folder/sub/"
+    if(psz && (psz != szPath) && (psz[1] == '\0' || (psz[1] == '.' && psz[2] == '\0')))
+      psz = FlyStrPrevSlash(szPath, psz - 1);
+
+    if(psz == NULL)
+    {
+      if(*szPath == '\0' || (strcmp(szPath, ".") == 0) || (strcmp(szPath, "./") == 0))
       {
-        strcpy(szPath, szDotDot);
-        fFoundParent = TRUE;
+        // e.g. parent of "" or "." is "../"
+        FlyStrZCpy(szPath, szDotDot, size);
+        len = strlen(szDotDot);
       }
-
+      else if((strcmp(szPath, "..") == 0) || (strcmp(szPath, "../") == 0))
+      {
+        // e.g. parent of ".." is "../../"
+        FlyStrPathAppend(szPath, szDotDot, size);
+        len = 3 + strlen(szDotDot);
+      }
       else
       {
-        if(!FlyStrIsSlash(FlyStrCharLast(szPath)))
-          strcat(szPath, "/");
-        strcat(szPath, szDotDot);
-        fFoundParent = TRUE;
+        // e.g. parent of "file.c" is "./"
+        len = strlen(&szDotDot[1]);
+        FlyStrZCpy(szPath, &szDotDot[1], size);
       }
     }
 
-    else if(strlen(szPath) > 1)
+    else
     {
-      psz = szPath + (strlen(szPath) - 1);
-      if(FlyStrIsSlash(*psz))
-        --psz;
-      psz = (char *)FlyStrPrevSlash(szPath, psz);
-      if(psz != NULL)
+      if(fAllDots)
       {
-        psz[1] = '\0';
-        fFoundParent = TRUE;
+        len = strlen(szPath) + strlen(szDotDot);
+        if(!isslash(FlyStrCharLast(szPath)))
+          ++len;
+        FlyStrPathAppend(szPath, szDotDot, size);
+      }
+      else
+      {
+        ++psz;
+        *psz = '\0';
+        len = strlen(szPath);
       }
     }
   }
 
-  return fFoundParent;
+  return len;
 }
 
 /*!------------------------------------------------------------------------------------------------
@@ -3463,7 +3632,7 @@ size_t FlyStrHdrStrip(char *szDst, size_t size, const char *szHdr, const char *s
 /*!------------------------------------------------------------------------------------------------
   Allocate a copy of a string on the heap.
 
-  Same as strdup(), but uses FlyAlloc() rather than malloc().
+  Same as strdup(), but uses FlyAlloc() rather than malloc() to track memory usage.
 
   @param   sz     ptr to a string, which may or may not be NUL terminated
   @return  ptr an asciiz string on the heap

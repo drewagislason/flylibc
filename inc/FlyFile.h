@@ -44,7 +44,7 @@ bool_t        FlyFileWrite          (const char *szFilename, const char *szConte
 bool_t        FlyFileWriteBin       (const char *szFilename, const uint8_t *szContents, long len);
 bool_t        FlyFileWriteEx        (const char *szFilename, const char *szContents, bool_t fCrLf);
 bool_t        FlyFileCopy           (const char *szOutFilename, const char *szInFilename);
-bool_t        FlyFileFullPath       (char *szFullPath, const char *szPartialPath);
+unsigned      FlyFileFullPath       (char *szFullPath, const char *szPartialPath);
 bool_t        FlyFileExists         (const char *szPath, bool_t *fFolder);
 bool_t        FlyFileExistsFile     (const char *szPath);
 bool_t        FlyFileExistsFolder   (const char *szPath);
